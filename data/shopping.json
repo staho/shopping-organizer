@@ -1,0 +1,846 @@
+{
+  "meta": {
+    "title": "Sample shopping organizer dataset",
+    "generated": "2026-10-24T00:35+02:00",
+    "timezone": "Europe/Warsaw",
+    "currencyDefault": "PLN",
+    "vatRate": 0.23,
+    "netPriceRule": "priceNet = priceGross/1.23, only where vatDeductible is true (new items from a shop that can issue a VAT invoice). null otherwise.",
+    "urlRule": "Sample links use https://example.com and are not real shop pages. Leave url as an empty string when a row has no link.",
+    "statusValues": [
+      "considering",
+      "recommended pick",
+      "decided to buy",
+      "just looking",
+      "dropped",
+      "bought",
+      "in progress"
+    ],
+    "sources": {
+      "Sample notes": "Fictional rows written so the site can be opened without access control. Not taken from a chat or a receipt."
+    },
+    "supplemented": "2026-10-24",
+    "supplement": "The previous personal extract was replaced with this sample. Prices, shop names, quotes, and links are invented. example.com URLs are placeholders."
+  },
+  "preferences": [
+    {
+      "id": "cheaper-vs-shipping",
+      "rule": "Cheaper wins, but a few days of local shipping beats a small saving from a slow overseas parcel. A saving under about 10% is not worth waiting a month.",
+      "quote": "Cheaper is better, until the parcel takes a month.",
+      "source": "Sample notes"
+    },
+    {
+      "id": "vat-invoice",
+      "rule": "A company invoice can deduct 23% VAT on new goods from a shop that issues one. Compare those at net (gross/1.23) against used or private listings, which stay at the sticker price.",
+      "quote": "If the shop can write a VAT invoice, compare the net.",
+      "source": "Sample notes"
+    },
+    {
+      "id": "black-desk",
+      "rule": "Desk accessories should be black: arm, cables, mousepad, and cable grommet. The desktop itself is a light wood top.",
+      "source": "Sample notes"
+    },
+    {
+      "id": "try-locally",
+      "rule": "Try chairs, headphones, and speakers in a shop before ordering, when a local shop stocks them.",
+      "source": "Sample notes"
+    },
+    {
+      "id": "established-sellers",
+      "rule": "Prefer a known shop or a listing with many sales. Skip a marketplace offer that is only a few zloty cheaper and has no reviews.",
+      "source": "Sample notes"
+    },
+    {
+      "id": "black-friday",
+      "rule": "Black Friday is a reason to wait only when the item is already in stock and the current price is the full list price. Do not wait on a one-off used listing.",
+      "source": "Sample notes"
+    }
+  ],
+  "topics": [
+    {
+      "id": "studio-headphones",
+      "title": "Closed studio headphones",
+      "category": "Audio",
+      "status": "decided to buy",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-12",
+      "summary": "Need closed headphones for calls and late-night editing. Open-back pairs were ruled out because the room is shared.",
+      "decision": "Buy the Northwind NC-700 from the sample shop at 899 zł. The cheaper market listing has no return window.",
+      "quotes": [
+        "Closed back, or I will hear the kitchen.",
+        "Add the 899 zł pair to the list and stop looking."
+      ],
+      "findings": [
+        "The 700 g pair is fine for two-hour sessions; the heavier studio set was tiring.",
+        "A detachable cable matters more than Bluetooth for this desk.",
+        "The marketplace pair is the same shell with a grey-import warranty."
+      ],
+      "tags": ["calls", "desk"],
+      "options": [
+        {
+          "name": "Northwind NC-700",
+          "priceGross": 899,
+          "priceNet": 730.89,
+          "currency": "PLN",
+          "shop": "Sample Audio",
+          "url": "https://example.com/shop/northwind-nc-700",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick. Two-year shop warranty and a 30-day return.",
+          "isPick": true
+        },
+        {
+          "name": "Northwind NC-700",
+          "priceGross": 849,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Marketplace seller",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": false,
+          "notes": "No link captured. Private seller, no VAT invoice.",
+          "isPick": false
+        },
+        {
+          "name": "Harbour Studio One",
+          "priceGross": 1299,
+          "priceNet": 1056.1,
+          "currency": "PLN",
+          "shop": "Sample Audio",
+          "url": "https://example.com/shop/harbour-studio-one",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Heavier. Better isolation, worse for long calls.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Order the NC-700 on a VAT invoice."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "mesh-wifi",
+      "title": "Mesh Wi-Fi kit",
+      "category": "Networking",
+      "status": "dropped",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-08",
+      "summary": "Looked at a two-node Wi-Fi 7 kit after a dead spot in the back room.",
+      "decision": "Dropped. A single access point on ethernet in the hall covers the flat. A mesh kit would only add a second SSID to manage.",
+      "quotes": ["If one cable fixes it, skip the mesh."],
+      "findings": [
+        "The back room is one plaster wall away from the hall, not a separate floor.",
+        "The kit's app wanted a cloud account for a guest network."
+      ],
+      "tags": ["wifi"],
+      "options": [
+        {
+          "name": "Lumen Mesh 2-pack",
+          "priceGross": 1499,
+          "priceNet": 1218.7,
+          "currency": "PLN",
+          "shop": "Sample Networks",
+          "url": "https://example.com/shop/lumen-mesh-2",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "List price for the two-node kit.",
+          "isPick": false
+        },
+        {
+          "name": "Hall access point",
+          "priceGross": 459,
+          "priceNet": 373.17,
+          "currency": "PLN",
+          "shop": "Sample Networks",
+          "url": "https://example.com/shop/hall-access-point",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "What actually got used. Kept here so the dropped topic still has a price.",
+          "isPick": true
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "laptop-16",
+      "title": "16-inch laptop",
+      "category": "Computers",
+      "status": "considering",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-14",
+      "summary": "A second machine for travel. The current laptop stays at the desk. Looking at 32 GB of memory and a matte panel.",
+      "decision": "Still open. The 32 GB model is the one to price. Do not buy the 16 GB version to save 400 zł.",
+      "quotes": ["32 GB or it is not worth carrying."],
+      "findings": [
+        "Refurb stock appears and vanishes within a day.",
+        "The shop's education price needs a document this sample does not have."
+      ],
+      "tags": ["travel"],
+      "options": [
+        {
+          "name": "Fieldbook 16, 32 GB",
+          "priceGross": 7499,
+          "priceNet": 6096.75,
+          "currency": "PLN",
+          "shop": "Sample Computers",
+          "url": "https://example.com/shop/fieldbook-16-32",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Current list price. Matte panel.",
+          "isPick": true
+        },
+        {
+          "name": "Fieldbook 16, 16 GB",
+          "priceGross": 7099,
+          "priceNet": 5771.54,
+          "currency": "PLN",
+          "shop": "Sample Computers",
+          "url": "https://example.com/shop/fieldbook-16-16",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Too little memory. Listed so the gap is visible.",
+          "isPick": false
+        },
+        {
+          "name": "Fieldbook 16, 32 GB refurb",
+          "priceGross": 6290,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Refurb counter",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": null,
+          "notes": "No link. VAT status unknown until the listing says who the seller is.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": [
+        "Check the refurb listing once more next week.",
+        "Confirm the matte panel is the one in stock, not the glossy photo."
+      ],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "desk-power",
+      "title": "In-desk power socket",
+      "category": "Desk / home office",
+      "status": "considering",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-11",
+      "summary": "A black grommet socket for the light wood desk: two mains plugs and two USB-C ports, flush when closed.",
+      "decision": "Leaning toward the 80 mm black grommet. Measure the existing hole before ordering the 60 mm one.",
+      "quotes": ["Black cap, not silver."],
+      "findings": [
+        "The desk hole looks closer to 80 mm than 60 mm.",
+        "USB-C at 30 W is enough for a phone, not for the laptop."
+      ],
+      "tags": ["black", "desk"],
+      "options": [
+        {
+          "name": "Black grommet 80 mm, 2× USB-C",
+          "priceGross": 189,
+          "priceNet": 153.66,
+          "currency": "PLN",
+          "shop": "Sample Desk",
+          "url": "https://example.com/shop/grommet-80",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick if the hole is 80 mm.",
+          "isPick": true
+        },
+        {
+          "name": "Black grommet 60 mm",
+          "priceGross": 149,
+          "priceNet": 121.14,
+          "currency": "PLN",
+          "shop": "Sample Desk",
+          "url": "https://example.com/shop/grommet-60",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Only if the hole is the smaller size.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Measure the hole before ordering."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "mini-pc",
+      "title": "Quiet mini PC",
+      "category": "Computers",
+      "status": "just looking",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-18",
+      "summary": "A small always-on box for builds and a browser. No decision, just a price band.",
+      "decision": "No pick yet. Anything under 2 500 zł with 32 GB is worth a second look. Ignore fanless cases that throttle.",
+      "quotes": ["Just looking. Do not add one to the basket."],
+      "findings": [
+        "Fanless boxes in this size throttle after a few minutes of compile.",
+        "One listing never stated a gross price, only a net figure on a forum post."
+      ],
+      "tags": ["always-on"],
+      "options": [
+        {
+          "name": "Nook Mini 32 GB",
+          "priceGross": 2499,
+          "priceNet": 2031.71,
+          "currency": "PLN",
+          "shop": "Sample Computers",
+          "url": "https://example.com/shop/nook-mini-32",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Has a fan. Closest to the budget.",
+          "isPick": false
+        },
+        {
+          "name": "Nook Mini barebone",
+          "priceGross": null,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Forum listing",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": null,
+          "notes": "Price was never written down. Shown so an empty price does not break the table.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "city-builder",
+      "title": "City builder on sale",
+      "category": "Gaming",
+      "status": "just looking",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-09",
+      "summary": "Whether the city builder is playable on the current laptop, and whether the sale price is real.",
+      "decision": "Just looking. Wait for a sale under 80 zł. Do not pre-order the expansion.",
+      "quotes": ["Only if it is under 80 zł."],
+      "findings": [
+        "The laptop runs the game at low settings.",
+        "The expansion is a separate purchase and is not in the base sale."
+      ],
+      "tags": ["game"],
+      "options": [
+        {
+          "name": "Harbour Lines 2",
+          "priceGross": 119,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample Games",
+          "url": "https://example.com/shop/harbour-lines-2",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Digital key. VAT is not a useful comparison on a consumer store key.",
+          "isPick": false
+        },
+        {
+          "name": "Harbour Lines 2, historic low",
+          "priceGross": 74,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample Games",
+          "url": "https://example.com/shop/harbour-lines-2-sale",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "The price that would actually trigger a buy.",
+          "isPick": true
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "bookshelf-speakers",
+      "title": "Bookshelf speakers",
+      "category": "Audio",
+      "status": "recommended pick",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-15",
+      "summary": "A small pair for the desk, powered by an existing amplifier. Passive, not a Bluetooth brick.",
+      "decision": "Recommended pair is the Birch Mini at 1 590 zł from Sample Audio. The imported driver is a parts option, priced in euros, and is not the pick.",
+      "quotes": ["Passive. I already have an amp."],
+      "findings": [
+        "The Birch Mini is sold as a pair.",
+        "The euro driver is one speaker, so a pair is double the sticker.",
+        "Stands are extra and not in the speaker price."
+      ],
+      "tags": ["passive", "desk"],
+      "options": [
+        {
+          "name": "Birch Mini (pair)",
+          "priceGross": 1590,
+          "priceNet": 1292.68,
+          "currency": "PLN",
+          "shop": "Sample Audio",
+          "url": "https://example.com/shop/birch-mini",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick. Pair, black baffles.",
+          "isPick": true
+        },
+        {
+          "name": "Birch Mini (pair)",
+          "priceGross": 1710,
+          "priceNet": 1390.24,
+          "currency": "PLN",
+          "shop": "Other sample shop",
+          "url": "https://example.com/shop/birch-mini-other",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Same pair, higher sticker. Kept to show two shops.",
+          "isPick": false
+        },
+        {
+          "name": "Paper cone driver, each",
+          "priceGross": 48.9,
+          "priceNet": null,
+          "currency": "EUR",
+          "shop": "Sample Imports",
+          "url": "https://example.com/shop/paper-cone-driver",
+          "urlSource": "sample",
+          "vatDeductible": null,
+          "notes": "Euro price, per piece. Not a finished speaker.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Listen to the Birch Mini in a shop if a demo pair exists."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "office-chair",
+      "title": "Office chair",
+      "category": "Desk / home office",
+      "status": "considering",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-16",
+      "summary": "A chair with a headrest and a 30-day return. The sample shortlist is two models from the same fictional brand.",
+      "decision": "Try the Sit Sample Pro first because of the headrest. The cheaper Sit Sample One is the value comparison, not the order.",
+      "quotes": ["Headrest, then the return window, then the price."],
+      "findings": [
+        "Both chairs claim a VAT invoice and a courier return.",
+        "Crossed-out prices on the sample page are marketing, not a measured discount.",
+        "The grey Pro is a different variant and is not in this table."
+      ],
+      "tags": ["chair", "vat"],
+      "options": [
+        {
+          "name": "Sit Sample Pro (black)",
+          "priceGross": 1449,
+          "priceNet": 1178.05,
+          "currency": "PLN",
+          "shop": "Sample Seating",
+          "url": "https://example.com/shop/sit-sample-pro",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick to test. Headrest height and angle, 30-day courier return.",
+          "isPick": true
+        },
+        {
+          "name": "Sit Sample One (black)",
+          "priceGross": 1099,
+          "priceNet": 893.5,
+          "currency": "PLN",
+          "shop": "Sample Seating",
+          "url": "https://example.com/shop/sit-sample-one",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Value comparison. No tilt tension.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Order the black Pro only after a yes. Use a VAT invoice."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "espresso-machine",
+      "title": "Espresso machine",
+      "category": "Kitchen",
+      "status": "recommended pick",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-13",
+      "summary": "A compact machine for two cups in the morning. No grinder built in; there is already a separate grinder.",
+      "decision": "Recommended pick is the Kettle & Steam Compact at 1 899 zł. The pod machine is cheaper and was rejected.",
+      "quotes": ["No pods."],
+      "findings": [
+        "The compact machine heats in under a minute in the sample spec sheet.",
+        "The pod machine's running cost is the pods, which this list does not try to model."
+      ],
+      "tags": ["kitchen"],
+      "options": [
+        {
+          "name": "Kettle & Steam Compact",
+          "priceGross": 1899,
+          "priceNet": 1543.9,
+          "currency": "PLN",
+          "shop": "Sample Kitchen",
+          "url": "https://example.com/shop/kettle-steam-compact",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick. 15 bar, no built-in grinder.",
+          "isPick": true
+        },
+        {
+          "name": "Pod Counter",
+          "priceGross": 499,
+          "priceNet": 405.69,
+          "currency": "PLN",
+          "shop": "Sample Kitchen",
+          "url": "https://example.com/shop/pod-counter",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Rejected. Included so the cheaper wrong answer stays visible.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Confirm the drip tray fits the cupboard height."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "desk-monitor",
+      "title": "32-inch desk monitor",
+      "category": "Desk / home office",
+      "status": "recommended pick",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-17",
+      "summary": "One 32-inch 4K panel for the desk, with USB-C power so the laptop uses a single cable. Budget around 2 000 zł net.",
+      "decision": "Recommended pick is the Plainview 32 at 1 369 zł gross (1 113,01 zł net) from Sample Displays. The brighter panel is over the budget.",
+      "quotes": ["One cable. 4K. Under two thousand net if we can."],
+      "findings": [
+        "USB-C power above 65 W covers the laptop.",
+        "The 1 369 zł price is the same at two sample shops; the table keeps both.",
+        "A third panel had a price that was never verified, so it stays unmarked as a pick."
+      ],
+      "tags": ["4k", "usb-c"],
+      "options": [
+        {
+          "name": "Plainview 32 4K",
+          "priceGross": 1369,
+          "priceNet": 1113.01,
+          "currency": "PLN",
+          "shop": "Sample Displays",
+          "url": "https://example.com/shop/plainview-32",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick. 90 W USB-C.",
+          "isPick": true
+        },
+        {
+          "name": "Plainview 32 4K",
+          "priceGross": 1369,
+          "priceNet": 1113.01,
+          "currency": "PLN",
+          "shop": "Second sample shop",
+          "url": "https://example.com/shop/plainview-32-second",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Same price, other shop.",
+          "isPick": false
+        },
+        {
+          "name": "Brightpanel 32",
+          "priceGross": 2238.75,
+          "priceNet": 1820.12,
+          "currency": "PLN",
+          "shop": "Sample Displays",
+          "url": "https://example.com/shop/brightpanel-32",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Higher brightness. Over the net budget.",
+          "isPick": false
+        },
+        {
+          "name": "Unverified 32",
+          "priceGross": 1529,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample Displays",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": null,
+          "notes": "Price was written down without a page to check. No link.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Order the Plainview 32 if the desk depth fits a 32-inch panel."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "storage-unit",
+      "title": "Storage unit",
+      "category": "Real estate",
+      "status": "in progress",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-19",
+      "summary": "A lock-up for bikes and boxes. Rent is preferred. Sale listings are here only as a comparison.",
+      "decision": "In progress. The sample pick is the north unit at 490 zł per month. Ask whether a bike and a small workbench are allowed before paying a deposit.",
+      "quotes": ["Rent first. Buying a garage is a different project."],
+      "findings": [
+        "Month, day, and hour listings use different price periods.",
+        "Private classifieds do not get a net price.",
+        "The sale prices are round sample figures, not valuations."
+      ],
+      "tags": ["rent"],
+      "options": [
+        {
+          "name": "North unit, 15 m²",
+          "priceGross": 490,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "https://example.com/listings/north-unit",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Pick. Ground floor, manual door.",
+          "isPick": true,
+          "pricePeriod": "month",
+          "listingKind": "rent"
+        },
+        {
+          "name": "South unit, 12 m²",
+          "priceGross": 420,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "https://example.com/listings/south-unit",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Cheaper, shorter ceiling.",
+          "isPick": false,
+          "pricePeriod": "month",
+          "listingKind": "rent"
+        },
+        {
+          "name": "Day locker",
+          "priceGross": 35,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "https://example.com/listings/day-locker",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Useful only for a one-off.",
+          "isPick": false,
+          "pricePeriod": "day",
+          "listingKind": "rent"
+        },
+        {
+          "name": "Hourly bay",
+          "priceGross": 8,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": false,
+          "notes": "No link. Too small for a bike.",
+          "isPick": false,
+          "pricePeriod": "hour",
+          "listingKind": "rent"
+        },
+        {
+          "name": "Lock-up for sale, 16 m²",
+          "priceGross": 85000,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "https://example.com/listings/lock-up-sale",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Sale comparison. Not the plan.",
+          "isPick": false,
+          "listingKind": "buy"
+        },
+        {
+          "name": "Garage for sale, 20 m²",
+          "priceGross": 120000,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Sample listings",
+          "url": "https://example.com/listings/garage-sale",
+          "urlSource": "sample",
+          "vatDeductible": false,
+          "notes": "Sale comparison.",
+          "isPick": false,
+          "listingKind": "buy"
+        }
+      ],
+      "nextSteps": [
+        "Ask the north-unit owner if a bike and a workbench are allowed.",
+        "Do not send a deposit before seeing the door."
+      ],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "speaker-foam",
+      "title": "Speaker foam rings",
+      "category": "DIY",
+      "status": "decided to buy",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-06",
+      "summary": "Replacement foam for an old pair of speakers. A small parts order, not a new speaker.",
+      "decision": "Buy two foam rings from Sample Parts. The generic pack is the same part without a size printed on the listing.",
+      "quotes": ["Two rings. Check the diameter twice."],
+      "findings": ["The printed diameter is 20 cm. A 18 cm ring will not stretch."],
+      "tags": ["parts"],
+      "options": [
+        {
+          "name": "Foam ring 20 cm, pair",
+          "priceGross": 42,
+          "priceNet": 34.15,
+          "currency": "PLN",
+          "shop": "Sample Parts",
+          "url": "https://example.com/shop/foam-ring-20",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Pick. Diameter printed on the listing.",
+          "isPick": true
+        },
+        {
+          "name": "Generic foam pack",
+          "priceGross": 29,
+          "priceNet": null,
+          "currency": "PLN",
+          "shop": "Marketplace",
+          "url": "",
+          "urlSource": null,
+          "vatDeductible": false,
+          "notes": "No size in the title. No link.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": ["Order the 20 cm pair."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "wall-sconce",
+      "title": "Wall sconce kit",
+      "category": "DIY",
+      "status": "dropped",
+      "statusDetail": "postponed",
+      "firstDiscussed": "2026-10-04",
+      "summary": "A small wall lamp from aluminium tube and a socket. Parked until the desk is finished.",
+      "decision": "Postponed. The parts list is fine; the time is not. Reopen after the monitor and chair are done.",
+      "quotes": ["Not this month."],
+      "findings": ["The socket and the tube are ordinary parts. Nothing here is scarce."],
+      "tags": ["lamp"],
+      "options": [
+        {
+          "name": "E27 socket and 20 cm tube",
+          "priceGross": 75,
+          "priceNet": 60.98,
+          "currency": "PLN",
+          "shop": "Sample Parts",
+          "url": "https://example.com/shop/sconce-kit",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Whole kit as one row.",
+          "isPick": true
+        }
+      ],
+      "nextSteps": ["Reopen after the desk purchases."],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "desk-speakers-diy",
+      "title": "DIY desk speakers",
+      "category": "Audio / DIY",
+      "status": "dropped",
+      "statusDetail": "postponed",
+      "firstDiscussed": "2026-10-03",
+      "summary": "Building a pair instead of buying the Birch Mini. Parked because the finished pair is less work.",
+      "decision": "Postponed in favour of the ready-made pair. The driver row stays so the euro price is still on the list.",
+      "quotes": ["Build them later, if the Birch Mini disappoints."],
+      "findings": ["Crossover parts are a second order and are not priced here."],
+      "tags": ["diy"],
+      "options": [
+        {
+          "name": "Paper cone driver, each",
+          "priceGross": 48.9,
+          "priceNet": null,
+          "currency": "EUR",
+          "shop": "Sample Imports",
+          "url": "https://example.com/shop/paper-cone-driver",
+          "urlSource": "sample",
+          "vatDeductible": null,
+          "notes": "Same euro part as on the bookshelf topic.",
+          "isPick": true
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "subwoofer-kit",
+      "title": "DIY subwoofer",
+      "category": "Audio / DIY",
+      "status": "dropped",
+      "statusDetail": "postponed",
+      "firstDiscussed": "2026-10-02",
+      "summary": "A sealed subwoofer kit. Too big for the room once the bookshelf pair is in.",
+      "decision": "Postponed. Do not buy the driver until the bookshelf speakers have been in the room for a month.",
+      "quotes": ["The room is small. A sub can wait."],
+      "findings": ["The kit needs a separate plate amp, which is not in the driver price."],
+      "tags": ["diy"],
+      "options": [
+        {
+          "name": "Sealed-kit driver 10 inch",
+          "priceGross": 649,
+          "priceNet": 527.64,
+          "currency": "PLN",
+          "shop": "Sample Parts",
+          "url": "https://example.com/shop/sealed-kit-driver",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Driver only.",
+          "isPick": true
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    },
+    {
+      "id": "cable-tray",
+      "title": "Under-desk cable tray",
+      "category": "Desk / home office",
+      "status": "bought",
+      "statusDetail": null,
+      "firstDiscussed": "2026-10-01",
+      "summary": "A black metal tray to hold the power strip. Already purchased in this sample.",
+      "decision": "Bought the 60 cm black tray at 129 zł. It fits. No further action.",
+      "quotes": ["The 60 cm one. The 80 cm hits the drawer."],
+      "findings": ["Mounted with the screws in the box. No extra hardware."],
+      "tags": ["bought", "black"],
+      "options": [
+        {
+          "name": "Black tray 60 cm",
+          "priceGross": 129,
+          "priceNet": 104.88,
+          "currency": "PLN",
+          "shop": "Sample Desk",
+          "url": "https://example.com/shop/cable-tray-60",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Purchased. Kept so the bought status has a price.",
+          "isPick": true
+        },
+        {
+          "name": "Black tray 80 cm",
+          "priceGross": 149,
+          "priceNet": 121.14,
+          "currency": "PLN",
+          "shop": "Sample Desk",
+          "url": "https://example.com/shop/cable-tray-80",
+          "urlSource": "sample",
+          "vatDeductible": true,
+          "notes": "Too long for this desk.",
+          "isPick": false
+        }
+      ],
+      "nextSteps": [],
+      "sources": ["Sample notes"]
+    }
+  ]
+}

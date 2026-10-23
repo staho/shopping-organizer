@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kamil's list</title>
+    <meta
+      name="description"
+      content="Sample shopping organizer: topics, decisions, options, and links. The notes in this checkout are fictional."
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#f3efe6" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a1814'/%3E%3Cpath d='M9 7h4.2l5.3 7.2V7H23v18h-4.2l-5.4-7.4V25H9V7z' fill='%23f4efe6'/%3E%3C/svg%3E"
+    />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("kamil-list-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", theme === "dark" ? "#12110f" : "#f3efe6");
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+      html[data-theme="dark"] {
+        background: #12110f;
+        color: #f4efe6;
+      }
+      html[data-theme="light"] {
+        background: #f3efe6;
+        color: #1a1814;
+      }
+      .boot {
+        font: 16px/1.5 "Segoe UI", sans-serif;
+        padding: 48px 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <p class="boot">Loading the list…</p>
+    </div>
+    <noscript>Kamil's list needs JavaScript to read the shopping notes.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
