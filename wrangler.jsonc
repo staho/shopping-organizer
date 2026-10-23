@@ -1,10 +1,64 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "kamil-shopping-organizer",
-  // Assets-only Worker: no script. `npm run build` writes ./dist.
-  "compatibility_date": "2026-10-23",
+  "main": "worker/index.ts",
+  // Worker in front of the static site. Today’s date for this script.
+  "compatibility_date": "2026-10-24",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Every request, including HTML and shopping.json, hits worker/index.ts first.
+    "run_worker_first": true
+  },
+  // `wrangler deploy` with no --env uses THIS top-level config, not env.production.
+  // ENVIRONMENT is production, so a bare deploy stays Access-only and fail-closed.
+  // vars do not inherit into named environments. Set TEAM_DOMAIN and POLICY_AUD here
+  // and again under env.production before deploying. Do not put Basic Auth secrets here.
+  "vars": {
+    "ENVIRONMENT": "production"
+    // Add a comma after "production", then uncomment both lines:
+    // "TEAM_DOMAIN": "https://<team-name>.cloudflareaccess.com",
+    // "POLICY_AUD": "<application-audience-tag>"
+  },
+  // workers.dev is off, so a deploy needs a route. Uncomment on the top level AND
+  // under env.production. Do not put the live hostname on env.test.
+  // "routes": [{ "pattern": "list.example.com", "custom_domain": true }],
+  "env": {
+    "production": {
+      // Keep the live script name. Without this, Wrangler would publish
+      // kamil-shopping-organizer-production.
+      "name": "kamil-shopping-organizer",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "production"
+        // Add a comma after "production", then uncomment both lines:
+        // "TEAM_DOMAIN": "https://<team-name>.cloudflareaccess.com",
+        // "POLICY_AUD": "<application-audience-tag>"
+      }
+      // "routes": [{ "pattern": "list.example.com", "custom_domain": true }]
+    },
+    "test": {
+      // Separate script. Basic Auth only. Never attach the live hostname here.
+      "name": "kamil-shopping-organizer-test",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "test"
+      },
+      // Deploy fails until both secrets exist. Local `wrangler dev --env test` only warns.
+      "secrets": {
+        "required": ["BASIC_AUTH_USER", "BASIC_AUTH_PASS"]
+      }
+    }
   }
 }

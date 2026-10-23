@@ -146,30 +146,113 @@ Example option:
 
 ## Deploy to Cloudflare
 
-This repo is ready to deploy as a static site and has not been deployed.
+The site is a Worker in front of static assets. [`worker/index.ts`](worker/index.ts) runs on every request (`assets.run_worker_first`), then serves `dist/` through the `ASSETS` binding. `not_found_handling` is `single-page-application`, so `/topic/...`, `/decisions`, and `/preferences` still resolve.
 
-Build first. Wrangler publishes the `dist/` directory from [`wrangler.jsonc`](wrangler.jsonc) as a Workers static-assets site, with `not_found_handling: single-page-application` so `/topic/...`, `/decisions`, and `/preferences` resolve on refresh.
+`workers_dev` and `preview_urls` are both `false` on the top-level config, on `env.production`, and on `env.test`. There is no `*.workers.dev` URL and no version preview URL unless you turn those flags back on. A deploy needs a route or custom domain.
+
+Nothing in this repo has been deployed.
+
+`npm run build` validates the data, typechecks, runs the auth tests, and writes `dist/`.
+
+### Production and test
+
+The live site is Access only. The password gate exists only for a separate test Worker.
+
+| Command | Config | `ENVIRONMENT` | Who can open it |
+| --- | --- | --- | --- |
+| `npx wrangler deploy` | top level | `production` | Cloudflare Access. A password is ignored. |
+| `npx wrangler deploy --env production` | `env.production` | `production` | Same live script, `kamil-shopping-organizer`. |
+| `npx wrangler deploy --env test` | `env.test` | `test` | HTTP Basic on `kamil-shopping-organizer-test`. |
+
+`wrangler deploy` with no `--env` uses the top-level config. Wrangler warns when several environments exist and the flag is omitted. The top-level `ENVIRONMENT` is `production`, so that command stays fail-closed. Pass `--env production` for the live script. `env.production.name` is `kamil-shopping-organizer`, so that deploy publishes the same script. Without the name override Wrangler would publish `kamil-shopping-organizer-production`.
+
+`vars` are not inherited. Put `TEAM_DOMAIN` and `POLICY_AUD` in the top-level `vars` and again in `env.production.vars`. Put the live route in both places too. Leave them off `env.test`.
 
 ```bash
 npm install
 npm run build
 npx wrangler login
-npx wrangler deploy
+npx wrangler deploy --env production
 ```
 
-`npx wrangler dev` (after a build) previews that same asset config locally.
+### Local dev
+
+`npm run dev` is Vite on `127.0.0.1:43123`. It does not run the Worker, so there is no Access login and no Basic prompt.
+
+`npx wrangler dev` (after a build) runs the top-level Worker. That is production mode. Until `TEAM_DOMAIN` and `POLICY_AUD` are set, every request gets **500**. It does not ask for a password.
+
+`npx wrangler dev --env test` is the password gate. Put the two secrets in `.dev.vars.test` (gitignored):
+
+```
+BASIC_AUTH_USER=reader
+BASIC_AUTH_PASS=choose-a-password
+```
+
+If both are unset, `wrangler dev --env test` warns and the Worker serves the files so you can click around. `wrangler deploy --env test` refuses to publish until both secrets exist (`secrets.required`). Do not point that script at the live hostname.
+
+### Gate
+
+**Production** (`ENVIRONMENT` unset, `production`, or anything other than exactly `test`):
+
+- Both `TEAM_DOMAIN` and `POLICY_AUD` must be set. If either is missing or blank, the Worker returns **500** `Access is not configured`. `BASIC_AUTH_USER` and `BASIC_AUTH_PASS` are ignored, including when the password is correct. The response has no `WWW-Authenticate` header.
+- When both Access vars are set, the Worker requires `Cf-Access-Jwt-Assertion` and checks it against `TEAM_DOMAIN/cdn-cgi/access/certs` (issuer and audience). Missing or invalid tokens get **403**. A trailing slash on `TEAM_DOMAIN` is ignored.
+
+**Test** (`ENVIRONMENT` exactly `test`):
+
+- Both Basic secrets set: SHA-256, then a constant-time compare. Failure is **401** with `WWW-Authenticate: Basic`. Both the user and the password are compared.
+- Only one secret set: **401**.
+- Neither secret set: the Worker serves the site. That is only for local `wrangler dev --env test`. Access vars are not a substitute for the password in this mode.
+
+Access values are Worker vars, not secrets. Uncomment them in both `vars` blocks in [`wrangler.jsonc`](wrangler.jsonc) so the next deploy keeps them. The AUD tag identifies the Access application. The team domain is public.
+
+```jsonc
+"vars": {
+  "ENVIRONMENT": "production",
+  "TEAM_DOMAIN": "https://<team-name>.cloudflareaccess.com",
+  "POLICY_AUD": "<application-audience-tag>"
+}
+```
+
+Basic credentials are secrets on the **test** environment only. Wrangler prompts and does not store them in the repo:
+
+```bash
+npx wrangler secret put BASIC_AUTH_USER --env test
+npx wrangler secret put BASIC_AUTH_PASS --env test
+```
+
+Do not set those secrets on the production script. The production Worker never reads them.
+
+### Cloudflare Access
+
+Access free covers a small number of users. You need a hostname on a zone in the same Cloudflare account (a Worker custom domain). The steps below match the Zero Trust dashboard as of October 2026.
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), open **Zero Trust**. The first visit asks you to choose a team name. That name is the team domain: `https://<team-name>.cloudflareaccess.com`. It is also on **Zero Trust → Settings → Custom pages** (the team domain is shown in the dashboard URL and under the team name). Copy it into `TEAM_DOMAIN`, including `https://` and without a path.
+2. **Zero Trust → Integrations → Identity providers**. **One-time PIN** is built in. Leave it enabled. Anyone who is not on the Allow policy does not get a code that works.
+3. **Zero Trust → Access controls → Applications → Create new application**.
+4. Choose **Self-hosted**, then **Add public hostname**. Pick the zone and the hostname that will serve this Worker (the same name you put in `routes`). Do not add the `workers.dev` host. That route is disabled in Wrangler.
+5. Under **Access policies**, create a policy:
+   - Policy name: `Allow me`
+   - Action: **Allow**
+   - Include rule: **Emails**, and enter your email address
+6. Under identity providers for this application, enable **One-time PIN**. You can leave other providers off. Session duration can stay at the default (24 hours) unless you want a shorter one.
+7. Select **Create**.
+8. Open the application again (**Configure → Additional settings**) and copy **Application Audience (AUD) Tag** into `POLICY_AUD`. The tag stays the same until you delete the application.
+9. Attach that hostname to the Worker: uncomment `routes` with `"custom_domain": true` in the top-level config and under `env.production`, fill `TEAM_DOMAIN` and `POLICY_AUD` in both `vars` blocks, then `npx wrangler deploy --env production`. In the dashboard this is **Workers & Pages → kamil-shopping-organizer → Domains & routes → Add → Custom domain**.
+10. Open the hostname in a private window. Access should ask for your email, send a PIN, and only then load the list. A request without the `Cf-Access-Jwt-Assertion` header receives 403 from the Worker even if Access is later bypassed. Until the two Access vars are present, the Worker returns 500 and does not offer a password.
+
+One-time PIN login: enter the allowed email, choose **Send login code**, paste the code from the mailbox. The message expires after about 10 minutes. The login page says a code was sent even when the email is not on the policy.
+
+Docs: [self-hosted application](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/), [validate the JWT](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/), [one-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
 
 ### Cloudflare Pages
 
-The build also writes `dist/_redirects` (`/* /index.html 200`). A Pages project can use build command `npm run build` and output directory `dist`.
-
-Deploy at the root of the hostname. Asset paths are absolute.
+The build also writes `dist/_redirects` (`/* /index.html 200`). Pages does not run `worker/index.ts`, so it would publish the files with no gate. Use the Worker deploy above.
 
 ### Privacy
 
 This checkout is sample data: fictional shops, prices, and quotes, with links only on `example.com`. It has no passwords, tokens, or payment details. `noindex` in the HTML is not access control.
 
-If you replace `data/shopping.json` with a real list, put the hostname behind [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/) (Zero Trust → Access → Applications) before anyone else can open it. Do not push any commit from before the sample-data replacement. Those commits still contain the personal extract.
+If you replace `data/shopping.json` with a real list, deploy with `--env production` only after `TEAM_DOMAIN` and `POLICY_AUD` are set and the hostname is the Access application. The production Worker does not fall back to a password. Do not push any commit from before the sample-data replacement. Those commits still contain the personal extract. The public GitHub history is the sample only.
 
 ## Data notes
 

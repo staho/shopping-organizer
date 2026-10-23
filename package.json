@@ -10,14 +10,17 @@
     "dev": "vite",
     "validate": "node scripts/validate.mjs",
     "typecheck": "tsc --noEmit",
-    "build": "npm run validate && tsc --noEmit && vite build",
+    "test": "node --experimental-strip-types --test worker/auth.test.ts",
+    "build": "npm run validate && tsc --noEmit && npm test && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource/fraunces": "^5.2.9",
-    "@fontsource/outfit": "^5.2.8"
+    "@fontsource/outfit": "^5.2.8",
+    "jose": "^6.2.13"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
     "wrangler": "^4.45.0"
