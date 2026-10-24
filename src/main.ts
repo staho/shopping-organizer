@@ -6,6 +6,7 @@ import "@fontsource/fraunces/600.css";
 import "@fontsource/fraunces/500-italic.css";
 import "./styles.css";
 
+import { installContinueDialog } from "./continue";
 import { currentTheme, messagePage, paintTheme, renderShell, type RouteName } from "./shell";
 import { normalize } from "./model";
 import type { Dataset } from "./types";
@@ -126,6 +127,7 @@ function onClick(event: MouseEvent): void {
 }
 
 async function boot(): Promise<void> {
+  installContinueDialog();
   document.addEventListener("click", onClick);
   window.addEventListener("popstate", () => render());
   const media = window.matchMedia("(prefers-color-scheme: dark)");

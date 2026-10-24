@@ -1,3 +1,4 @@
+import { continueButton } from "../continue";
 import { h } from "../dom";
 import { formatDate, formatPickPrice, plural, statusLabel, STATUS_ORDER, topicPath } from "../format";
 import {
@@ -191,36 +192,41 @@ function topicCard(topic: Topic): HTMLElement {
   const extra = chosen.length - shown.length;
   const links = topic.options.filter((option) => option.url.trim()).length;
   return h(
-    "a",
-    { class: "card", href: topicPath(topic.id) },
-    h("div", { class: "card-kicker" },
-      h("span", { class: "eyebrow" }, topic.category),
-      h("time", { datetime: topic.firstDiscussed }, formatDate(topic.firstDiscussed)),
-    ),
-    h("h2", null, topic.title),
-    h("div", { class: "badge-row" },
-      statusBadge(displayStatus(topic)),
-      topic.tags.map((tag) => h("span", { class: "tag" }, tag)),
-    ),
-    h("div", { class: "pick-block" },
-      h("div", { class: "pick-kicker" }, chosen.length > 1 ? "Picks" : "Pick"),
-      chosen.length
-        ? [
-            shown.map((option) =>
-              h("div", { class: "pick-line" },
-                h("span", { class: "pick-name" }, option.name),
-                h("span", { class: "amt" }, formatPickPrice(option)),
-              ),
-            ),
-            extra > 0 ? h("div", { class: "more" }, `+${extra} more`) : null,
-          ]
-        : h("p", { class: "muted" }, "No pick yet"),
-    ),
+    "article",
+    { class: "card" },
     h(
-      "p",
-      { class: "card-foot" },
-      `${plural(topic.options.length, "option", "options")} · ${plural(topic.nextSteps.length, "open step", "open steps")} · ${plural(links, "link", "links")}`,
+      "a",
+      { class: "card-main", href: topicPath(topic.id) },
+      h("div", { class: "card-kicker" },
+        h("span", { class: "eyebrow" }, topic.category),
+        h("time", { datetime: topic.firstDiscussed }, formatDate(topic.firstDiscussed)),
+      ),
+      h("h2", null, topic.title),
+      h("div", { class: "badge-row" },
+        statusBadge(displayStatus(topic)),
+        topic.tags.map((tag) => h("span", { class: "tag" }, tag)),
+      ),
+      h("div", { class: "pick-block" },
+        h("div", { class: "pick-kicker" }, chosen.length > 1 ? "Picks" : "Pick"),
+        chosen.length
+          ? [
+              shown.map((option) =>
+                h("div", { class: "pick-line" },
+                  h("span", { class: "pick-name" }, option.name),
+                  h("span", { class: "amt" }, formatPickPrice(option)),
+                ),
+              ),
+              extra > 0 ? h("div", { class: "more" }, `+${extra} more`) : null,
+            ]
+          : h("p", { class: "muted" }, "No pick yet"),
+      ),
+      h(
+        "p",
+        { class: "card-foot" },
+        `${plural(topic.options.length, "option", "options")} · ${plural(topic.nextSteps.length, "open step", "open steps")} · ${plural(links, "link", "links")}`,
+      ),
     ),
+    continueButton(topic.id, topic.title),
   );
 }
 

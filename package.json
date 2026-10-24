@@ -10,7 +10,7 @@
     "dev": "vite",
     "validate": "node scripts/validate.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test worker/auth.test.ts",
+    "test": "node --experimental-strip-types --test worker/auth.test.ts worker/continue.test.ts",
     "build": "npm run validate && tsc --noEmit && npm test && vite build",
     "preview": "vite preview"
   },

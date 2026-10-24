@@ -38,13 +38,31 @@ jobs:
           npm ci
           npm run build
 
+      - name: Prepare Grok webhook secrets
+        id: grok
+        env:
+          GROK_WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
+          GROK_WEBHOOK_KEY: ${{ secrets.GROK_WEBHOOK_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${GROK_WEBHOOK_URL}" ]; then echo "::add-mask::${GROK_WEBHOOK_URL}"; fi
+          if [ -n "${GROK_WEBHOOK_KEY}" ]; then echo "::add-mask::${GROK_WEBHOOK_KEY}"; fi
+          if [ -z "${GROK_WEBHOOK_URL}" ] || [ -z "${GROK_WEBHOOK_KEY}" ]; then
+            echo "extra=" >> "$GITHUB_OUTPUT"
+            echo "Grok webhook secrets are absent. /api/continue will return 503."
+            exit 0
+          fi
+          python3 -c 'import json, os; path = os.environ["RUNNER_TEMP"] + "/grok-secrets.json"; json.dump({"GROK_WEBHOOK_URL": os.environ["GROK_WEBHOOK_URL"], "GROK_WEBHOOK_KEY": os.environ["GROK_WEBHOOK_KEY"]}, open(path, "w")); os.chmod(path, 0o600)'
+          echo "extra=--secrets-file ${RUNNER_TEMP}/grok-secrets.json" >> "$GITHUB_OUTPUT"
+          echo "Grok webhook secrets will be uploaded with this deploy."
+
       - name: Deploy production Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4"
-          command: deploy --env production --var TEAM_DOMAIN:https://staho.cloudflareaccess.com --var POLICY_AUD:${{ steps.access.outputs.aud }}
+          command: deploy --env production --var TEAM_DOMAIN:https://staho.cloudflareaccess.com --var POLICY_AUD:${{ steps.access.outputs.aud }} ${{ steps.grok.outputs.extra }}
 
       - name: Smoke test Access login
         run: bash .github/scripts/smoke-access.sh

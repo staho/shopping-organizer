@@ -1,3 +1,4 @@
+import { continueButton } from "../continue";
 import { h, type Child } from "../dom";
 import { formatDate, formatGross, formatNet, plural } from "../format";
 import { displayStatus } from "../model";
@@ -32,6 +33,7 @@ export function renderTopic(topic: Topic | undefined, requestedId: string): HTML
         statusBadge(displayStatus(topic)),
         topic.tags.map((tag) => h("span", { class: "tag" }, tag)),
       ),
+      continueButton(topic.id, topic.title),
     ),
     h("div", { class: "topic-layout" },
       panel("Summary", topic.summary ? h("p", { class: "prose" }, topic.summary) : h("p", { class: "muted" }, "No summary recorded.")),

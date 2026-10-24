@@ -168,7 +168,7 @@ The live site is Access only. The password gate exists only for a separate test 
 
 `vars` are not inherited. `TEAM_DOMAIN` is `https://staho.cloudflareaccess.com` in both production `vars` blocks. `POLICY_AUD` is the Access application audience tag. It is not in the repo. The deploy workflow passes it with `--var`. A production deploy without that value returns **500** and does not serve the site.
 
-Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. The workflow masks the token, the account id, the email, and the audience tag.
+Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. Optional: `GROK_WEBHOOK_URL` and `GROK_WEBHOOK_KEY`. When both are set, the deploy uploads them as Worker secrets. When either is missing, the deploy still succeeds and `POST /api/continue` returns 503. The workflow masks the token, the account id, the email, the audience tag, and the webhook values.
 
 ```bash
 npm install
@@ -228,6 +228,29 @@ The team domain is `https://staho.cloudflareaccess.com`. [`.github/workflows/dep
 A private-window visit should stop on the Access login page, ask for the allowed email, and send a PIN. The message expires after about 10 minutes. The login page says a code was sent even when the email is not on the policy. The workflow smoke test requests `https://shopping-organizer.staho.dev` and fails unless the response redirects to `staho.cloudflareaccess.com`.
 
 Docs: [self-hosted application](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/), [validate the JWT](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/), [one-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
+
+### Continue in Grok Bot
+
+Each topic, on its page and on the overview card, has **Continue in Grok Bot**. The dialog takes an optional note and posts `{ "topicId", "note" }` to `POST /api/continue`.
+
+The Worker uses the same gate as the rest of the site: Cloudflare Access in production, Basic Auth when `ENVIRONMENT` is `test`. It loads the topic from the bundled `data/shopping.json` and ignores any topic body sent by the browser. The JSON sent to the webhook is:
+
+```json
+{
+  "source": "shopping-organizer",
+  "topicId": "studio-headphones",
+  "title": "Closed studio headphones",
+  "status": "decided to buy",
+  "url": "https://shopping-organizer.staho.dev/topic/studio-headphones",
+  "note": "",
+  "topic": {},
+  "sentAt": "2026-10-24T12:00:00.000Z"
+}
+```
+
+`url` is the real topic path (`/topic/<id>`), not a hash route. `topic` is the full object from the data file.
+
+The webhook URL and key are Worker secrets, `GROK_WEBHOOK_URL` and `GROK_WEBHOOK_KEY`. If either is missing or blank, the endpoint returns **503** `not configured`. They are not written into the page or the logs. The key is sent in `Authorization: Bearer <key>` unless the plain var `GROK_WEBHOOK_KEY_HEADER` names a different header, in which case that header carries the raw key. A note longer than 4000 characters is rejected. `npm run dev` does not run the Worker, so the button cannot complete a send there.
 
 ### Cloudflare Pages
 
