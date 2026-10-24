@@ -231,7 +231,7 @@ Docs: [self-hosted application](https://developers.cloudflare.com/cloudflare-one
 
 ### Cloudflare Pages
 
-The build also writes `dist/_redirects` (`/* /index.html 200`). Pages does not run `worker/index.ts`, so it would publish the files with no gate. Use the Worker deploy above.
+Workers static assets reject a `/* /index.html 200` rule in `_redirects` as a redirect loop, so the build does not emit that file. Unknown paths are handled by `not_found_handling: single-page-application` on the Worker. Pages would publish the files with no gate. Use the Worker deploy above.
 
 ### Privacy
 
