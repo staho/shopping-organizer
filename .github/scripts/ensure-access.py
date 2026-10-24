@@ -56,7 +56,7 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
-def api(method: str, path: str, body: dict | None = None) -> dict:
+def api(method: str, path: str, body: dict | None = None, soft_statuses: frozenset[int] = frozenset()) -> dict | None:
     data = None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(API + path, data=data, method=method)
     request.add_header("Authorization", f"Bearer {TOKEN}")
@@ -67,13 +67,10 @@ def api(method: str, path: str, body: dict | None = None) -> dict:
             payload = json.loads(raw) if raw else {"success": True, "result": None}
     except urllib.error.HTTPError as error:
         raw = error.read().decode("utf-8", "replace")
+        if error.code in soft_statuses:
+            return None
         hint = ""
-        if error.code == 403 and "identity_providers" in path:
-            hint = (
-                " Listing or creating the One-time PIN provider needs "
-                "Access: Organizations, Identity Providers, and Groups Read/Write."
-            )
-        elif error.code == 403:
+        if error.code == 403:
             hint = " The token needs Access: Apps and Policies Edit on this account."
         fail(
             f"Cloudflare API {method} {path} returned HTTP {error.code}.{hint} "
@@ -88,20 +85,24 @@ def api(method: str, path: str, body: dict | None = None) -> dict:
 
 
 def list_all(path: str) -> list:
-    payload = api("GET", path)
+    separator = "&" if "?" in path else "?"
+    payload = api("GET", f"{path}{separator}page=1&per_page=100")
+    if not payload:
+        fail(f"Cloudflare API GET {path} returned no body. The Worker was not deployed.")
     result = payload.get("result") or []
     if not isinstance(result, list):
         fail(f"Cloudflare API GET {path} did not return a list. The Worker was not deployed.")
     items = list(result)
     info = payload.get("result_info") or {}
-    total_pages = int(info.get("total_pages") or 1)
-    per_page = int(info.get("per_page") or 20)
-    for page in range(2, total_pages + 1):
-        separator = "&" if "?" in path else "?"
+    total_count = int(info.get("total_count") or len(items))
+    per_page = int(info.get("per_page") or 100)
+    page = 1
+    while len(items) < total_count and page < 20:
+        page += 1
         payload = api("GET", f"{path}{separator}page={page}&per_page={per_page}")
         page_items = payload.get("result") or []
-        if not isinstance(page_items, list):
-            fail(f"Cloudflare API GET {path} page {page} did not return a list.")
+        if not isinstance(page_items, list) or not page_items:
+            break
         items.extend(page_items)
     return items
 
@@ -138,14 +139,7 @@ def rule_email(rule: dict) -> str:
     return ""
 
 
-def policy_matches(policy: dict, otp_id: str) -> bool:
-    if policy.get("decision") != "allow":
-        return False
-    include = policy.get("include") or []
-    if len(include) != 1 or not isinstance(include[0], dict):
-        return False
-    if rule_email(include[0]) != EMAIL:
-        return False
+def login_methods(policy: dict) -> list[str]:
     methods = []
     for rule in policy.get("require") or []:
         if not isinstance(rule, dict):
@@ -153,58 +147,117 @@ def policy_matches(policy: dict, otp_id: str) -> bool:
         login = rule.get("login_method")
         if isinstance(login, dict) and isinstance(login.get("id"), str):
             methods.append(login["id"])
-    return methods == [otp_id]
+    return methods
 
 
-def desired_policy(otp_id: str) -> dict:
-    return {
+def policy_matches(policy: dict, otp_id: str | None) -> bool:
+    if policy.get("decision") != "allow":
+        return False
+    include = policy.get("include") or []
+    if len(include) != 1 or not isinstance(include[0], dict):
+        return False
+    if rule_email(include[0]) != EMAIL:
+        return False
+    methods = login_methods(policy)
+    if otp_id:
+        return methods == [otp_id]
+    return methods == []
+
+
+def desired_policy(otp_id: str | None) -> dict:
+    policy = {
         "name": POLICY_NAME,
         "decision": "allow",
         "precedence": 1,
         "include": [{"email": {"email": EMAIL}}],
-        "require": [{"login_method": {"id": otp_id}}],
     }
+    if otp_id:
+        policy["require"] = [{"login_method": {"id": otp_id}}]
+    return policy
 
 
-def ensure_otp() -> str:
-    providers = list_all(f"/accounts/{ACCOUNT}/access/identity_providers")
-    matches = [item for item in providers if item.get("type") == "onetimepin"]
-    if matches:
-        otp_id = str(matches[0].get("id") or "")
-        if not otp_id:
-            fail("One-time PIN provider has no id. The Worker was not deployed.")
-        print(f"Using existing One-time PIN identity provider {otp_id}")
-        return otp_id
-    created = api(
-        "POST",
-        f"/accounts/{ACCOUNT}/access/identity_providers",
-        {"name": "One-time PIN login", "type": "onetimepin", "config": {}},
-    )
-    otp_id = str((created.get("result") or {}).get("id") or "")
+def provider_type(item: dict) -> str:
+    for key, value in item.items():
+        if str(key).lower() == "type" and isinstance(value, str):
+            return value.strip()
+    return ""
+
+
+def provider_id(item: dict) -> str:
+    for key in ("id", "uid"):
+        value = item.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def is_otp(item: dict) -> bool:
+    kind = "".join(ch for ch in provider_type(item).lower() if ch.isalnum())
+    if kind in {"onetimepin", "otp"}:
+        return True
+    name = ""
+    for key, value in item.items():
+        if str(key).lower() == "name" and isinstance(value, str):
+            name = value
+    compact = "".join(ch for ch in name.lower() if ch.isalnum())
+    return compact in {"onetimepin", "onetimepinlogin", "otp"}
+
+
+def ensure_otp() -> str | None:
+    """Return the One-time PIN provider id when the list shows one.
+
+    This token cannot create identity providers. A missing or forbidden list
+    leaves allowed_idps unset so the app accepts every provider on the account.
+    """
+    path = f"/accounts/{ACCOUNT}/access/identity_providers"
+    probe = api("GET", f"{path}?page=1&per_page=100", soft_statuses=frozenset({403}))
+    if probe is None:
+        print(
+            "NOTICE: Identity provider list returned HTTP 403. "
+            "allowed_idps will be omitted so the application allows every identity provider on the account."
+        )
+        return None
+    providers = list_all(path)
+    types = sorted({provider_type(item) or "(no type)" for item in providers})
+    print(f"Identity providers visible: count={len(providers)} types={', '.join(types) or 'none'}")
+    matches = [item for item in providers if is_otp(item)]
+    if not matches:
+        print(
+            "NOTICE: No onetimepin provider is visible to this token. "
+            "allowed_idps will be omitted so the application allows every identity provider on the account."
+        )
+        return None
+    otp_id = provider_id(matches[0])
     if not otp_id:
-        fail("Creating the One-time PIN provider returned no id. The Worker was not deployed.")
-    print(f"Created One-time PIN identity provider {otp_id}")
+        print(
+            "NOTICE: The One-time PIN provider had no id. "
+            "allowed_idps will be omitted so the application allows every identity provider on the account."
+        )
+        return None
+    print(f"Using existing One-time PIN identity provider {otp_id}")
     return otp_id
 
 
-def app_body(name: str, otp_id: str) -> dict:
-    return {
+def app_body(name: str, otp_id: str | None) -> dict:
+    body = {
         "name": name,
         "type": "self_hosted",
         "domain": HOST,
         "session_duration": SESSION,
         "app_launcher_visible": False,
-        "auto_redirect_to_identity": True,
-        "allowed_idps": [otp_id],
         "destinations": [{"type": "public", "uri": HOST}],
     }
+    if otp_id:
+        body["auto_redirect_to_identity"] = True
+        body["allowed_idps"] = [otp_id]
+    return body
 
 
 def session_ok(app: dict) -> bool:
     return str(app.get("session_duration") or "") in {"24h", "24h0m0s", "1440m"}
 
 
-def ensure_app(otp_id: str) -> tuple[dict, bool]:
+def ensure_app(otp_id: str | None) -> tuple[dict, bool]:
     apps = list_all(f"/accounts/{ACCOUNT}/access/apps")
     found = [app for app in apps if app_matches(app)]
     if len(found) > 1:
@@ -226,12 +279,8 @@ def ensure_app(otp_id: str) -> tuple[dict, bool]:
     current = api("GET", f"/accounts/{ACCOUNT}/access/apps/{app_id}").get("result") or found[0]
     name = str(current.get("name") or APP_NAME)
     allowed = current.get("allowed_idps") or []
-    needs_update = (
-        not session_ok(current)
-        or allowed != [otp_id]
-        or current.get("auto_redirect_to_identity") is not True
-        or host_of(current.get("domain")) != HOST
-    )
+    idp_ok = True if not otp_id else allowed == [otp_id] and current.get("auto_redirect_to_identity") is True
+    needs_update = not session_ok(current) or not idp_ok or host_of(current.get("domain")) != HOST
     if needs_update:
         updated = api("PUT", f"/accounts/{ACCOUNT}/access/apps/{app_id}", app_body(name, otp_id))
         current = updated.get("result") or current
@@ -245,7 +294,7 @@ def policy_id(policy: dict) -> str:
     return str(policy.get("id") or policy.get("uid") or "")
 
 
-def ensure_policy(app_id: str, otp_id: str) -> None:
+def ensure_policy(app_id: str, otp_id: str | None) -> None:
     policies = list_all(f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies")
     good = [policy for policy in policies if policy_matches(policy, otp_id)]
     if good:

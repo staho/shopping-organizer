@@ -219,10 +219,10 @@ Do not set those secrets on the production script. The production Worker never r
 
 The team domain is `https://staho.cloudflareaccess.com`. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) calls the Access API before the Worker deploy:
 
-1. Find an identity provider with type `onetimepin`. Create **One-time PIN login** if it is missing.
+1. List identity providers. This workflow never creates one. If a `onetimepin` provider is visible, the app allows only that id. If the list is empty or forbidden, `allowed_idps` is omitted so every identity provider on the account can be used.
 2. Find a self-hosted application whose domain is `shopping-organizer.staho.dev`. Create **Shopping organizer** if it is missing.
-3. Session duration is 24 hours. The only login method on the app is that One-time PIN provider.
-4. One Allow policy, named `Allow me`, includes the address in `ACCESS_ALLOWED_EMAIL` and requires the One-time PIN provider. Other policies on that application are removed.
+3. Session duration is 24 hours.
+4. One Allow policy, named `Allow me`, includes only the address in `ACCESS_ALLOWED_EMAIL`. Other policies on that application are removed. When the One-time PIN id is visible, the policy also requires that provider.
 5. Read the application audience tag and pass it to Wrangler as `POLICY_AUD`.
 
 A private-window visit should stop on the Access login page, ask for the allowed email, and send a PIN. The message expires after about 10 minutes. The login page says a code was sent even when the email is not on the policy. The workflow smoke test requests `https://shopping-organizer.staho.dev` and fails unless the response redirects to `staho.cloudflareaccess.com`.
