@@ -95,7 +95,7 @@ test("production rejects Basic Auth credentials", async () => {
     configured,
     getKey,
   );
-  assert.deepEqual(withJwt, { ok: true });
+  assert.deepEqual(withJwt, { ok: true, kind: "user" });
 });
 
 test("production fails closed when Access is not configured", async () => {
@@ -146,7 +146,7 @@ test("production Access requires a valid Cf-Access-Jwt-Assertion", async () => {
     env,
     getKey,
   );
-  assert.deepEqual(ok, { ok: true });
+  assert.deepEqual(ok, { ok: true, kind: "user" });
 });
 
 test("Basic auth is accepted only when ENVIRONMENT is test", async () => {
@@ -161,7 +161,7 @@ test("Basic auth is accepted only when ENVIRONMENT is test", async () => {
   denied(swapped, 401);
 
   const ok = await authorize(request({ authorization: basicHeader() }), env);
-  assert.deepEqual(ok, { ok: true });
+  assert.deepEqual(ok, { ok: true, kind: "test" });
 
   const onlyUser = await authorize(request({ authorization: basicHeader() }), {
     ENVIRONMENT: "test",
@@ -170,7 +170,7 @@ test("Basic auth is accepted only when ENVIRONMENT is test", async () => {
   denied(onlyUser, 401);
 
   const neither = await authorize(request(), { ENVIRONMENT: "test", TEAM_DOMAIN: TEAM, POLICY_AUD: AUD });
-  assert.deepEqual(neither, { ok: true });
+  assert.deepEqual(neither, { ok: true, kind: "test" });
 
   const { privateKey, getKey } = await keys();
   const jwtWithoutPassword = await authorize(

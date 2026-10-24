@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -16,6 +17,8 @@ API = "https://api.cloudflare.com/client/v4"
 HOST = "shopping-organizer.staho.dev"
 APP_NAME = "Shopping organizer"
 POLICY_NAME = "Allow me"
+SERVICE_NAME = "Zakupoholik"
+SERVICE_POLICY = "Zakupoholik write"
 SESSION = "24h"
 
 
@@ -48,6 +51,7 @@ def redact(text: str) -> str:
     for secret in (TOKEN, ACCOUNT, EMAIL):
         if secret:
             text = text.replace(secret, "[redacted]")
+    text = re.sub(r'"(client_secret|client_id)"\s*:\s*"[^"]*"', r'"\1":"[redacted]"', text)
     return text
 
 
@@ -294,13 +298,130 @@ def policy_id(policy: dict) -> str:
     return str(policy.get("id") or policy.get("uid") or "")
 
 
-def ensure_policy(app_id: str, otp_id: str | None) -> None:
-    policies = list_all(f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies")
-    good = [policy for policy in policies if policy_matches(policy, otp_id)]
+def service_policy_body(token_id: str) -> dict:
+    return {
+        "name": SERVICE_POLICY,
+        "decision": "non_identity",
+        "precedence": 2,
+        "include": [{"service_token": {"token_id": token_id}}],
+    }
+
+
+def service_policy_matches(policy: dict, token_id: str) -> bool:
+    if policy.get("name") != SERVICE_POLICY or policy.get("decision") != "non_identity":
+        return False
+    include = policy.get("include") or []
+    if len(include) != 1 or not isinstance(include[0], dict):
+        return False
+    token = include[0].get("service_token")
+    if isinstance(token, dict):
+        return token.get("token_id") == token_id
+    return token == token_id
+
+
+def create_service_token() -> dict | None:
+    path = f"/accounts/{ACCOUNT}/access/service_tokens"
+    payload_bytes = json.dumps({"name": SERVICE_NAME, "duration": "8760h"}).encode()
+    request = urllib.request.Request(API + path, data=payload_bytes, method="POST")
+    request.add_header("Authorization", f"Bearer {TOKEN}")
+    request.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as error:
+        if error.code == 403:
+            error.read()
+            print(
+                "NOTICE: Creating an Access service token returned HTTP 403. "
+                "Add the API token permission Access: Service Tokens Edit "
+                "(the API reference also calls this Access: Service Tokens Write). "
+                "No Service Auth policy was changed. Browser login is unchanged."
+            )
+            write_output("service_tokens", "forbidden")
+            return None
+        detail = redact(error.read().decode("utf-8", "replace")[:500])
+        fail(f"Creating the service token returned HTTP {error.code}. The Worker was not deployed.\n{detail}")
+    except urllib.error.URLError as error:
+        fail(f"Creating the service token failed: {error.reason}. The Worker was not deployed.")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        fail("Creating the service token returned a non-JSON body. The Worker was not deployed.")
+    result = payload.get("result") if isinstance(payload, dict) else None
+    if not isinstance(result, dict):
+        fail("Creating the service token returned no result. The Worker was not deployed.")
+    # The client secret is shown only once. Never print it, and do not keep it on the object.
+    result.pop("client_secret", None)
+    result.pop("client_id", None)
+    print(
+        "Created service token Zakupoholik. Its client secret is not stored and is not in the logs. "
+        "Roll that token in Zero Trust to copy a new client id and client secret for the bot."
+    )
+    return result
+
+
+def ensure_service_token() -> str | None:
+    path = f"/accounts/{ACCOUNT}/access/service_tokens"
+    probe = api("GET", f"{path}?page=1&per_page=100", soft_statuses=frozenset({403}))
+    if probe is None:
+        print(
+            "NOTICE: The Access service token list returned HTTP 403. "
+            "Add the API token permission Access: Service Tokens Edit "
+            "(the API reference also calls this Access: Service Tokens Write). "
+            "No Service Auth policy was changed. Browser login is unchanged."
+        )
+        write_output("service_tokens", "forbidden")
+        return None
+    tokens = list_all(path)
+    print(f"Service tokens visible: count={len(tokens)}")
+    match = next((item for item in tokens if str(item.get("name") or "") == SERVICE_NAME), None)
+    created_now = False
+    if match is None:
+        match = create_service_token()
+        if match is None:
+            return None
+        created_now = True
+    token_id = str(match.get("id") or "")
+    if not token_id:
+        print("NOTICE: The Zakupoholik service token had no id. No Service Auth policy was changed.")
+        return None
+    write_output("service_tokens", "created" if created_now else "reused")
+    print(f"Using service token {SERVICE_NAME}, created={str(created_now).lower()}")
+    return token_id
+
+
+def ensure_service_policy(app_id: str, policies: list, token_id: str) -> str:
+    good = [policy for policy in policies if service_policy_matches(policy, token_id)]
+    body = service_policy_body(token_id)
     if good:
         keep = policy_id(good[0])
-    elif policies:
-        first = policy_id(policies[0])
+        print(f"Found Service Auth policy {SERVICE_POLICY}")
+        return keep
+    existing = next((policy for policy in policies if policy.get("name") == SERVICE_POLICY), None)
+    if existing and policy_id(existing):
+        updated = api(
+            "PUT",
+            f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies/{policy_id(existing)}",
+            body,
+        )
+        print(f"Updated Service Auth policy {SERVICE_POLICY}")
+        return policy_id(updated.get("result") or {}) or policy_id(existing)
+    created = api("POST", f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies", body)
+    keep = policy_id(created.get("result") or {})
+    if not keep:
+        fail("Creating the Service Auth policy returned no id. The Worker was not deployed.")
+    print(f"Created Service Auth policy {SERVICE_POLICY}")
+    return keep
+
+
+def ensure_policy(app_id: str, otp_id: str | None, service_token_id: str | None = None) -> None:
+    policies = list_all(f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies")
+    allow_policies = [policy for policy in policies if policy.get("decision") != "non_identity"]
+    good = [policy for policy in allow_policies if policy_matches(policy, otp_id)]
+    if good:
+        keep = policy_id(good[0])
+    elif allow_policies:
+        first = policy_id(allow_policies[0])
         if not first:
             fail("Access policy has no id. The Worker was not deployed.")
         updated = api(
@@ -321,11 +442,21 @@ def ensure_policy(app_id: str, otp_id: str | None) -> None:
             fail("Creating the Access policy returned no id. The Worker was not deployed.")
         print(f"Created Access policy {keep}")
 
+    keep_ids = {keep}
+    if service_token_id:
+        service_keep = ensure_service_policy(app_id, policies, service_token_id)
+        if service_keep:
+            keep_ids.add(service_keep)
+
     for policy in policies:
         current = policy_id(policy)
-        if current and current != keep:
-            api("DELETE", f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies/{current}")
-            print(f"Removed extra Access policy {current}")
+        if not current or current in keep_ids:
+            continue
+        if policy.get("decision") == "non_identity":
+            print("Left an existing non-identity Access policy in place.")
+            continue
+        api("DELETE", f"/accounts/{ACCOUNT}/access/apps/{app_id}/policies/{current}")
+        print(f"Removed extra Access policy {current}")
 
 
 def write_output(name: str, value: str) -> None:
@@ -342,7 +473,8 @@ def main() -> None:
     app_id = str(app.get("id") or "")
     if not app_id:
         fail("Access application has no id. The Worker was not deployed.")
-    ensure_policy(app_id, otp_id)
+    service_token_id = ensure_service_token()
+    ensure_policy(app_id, otp_id, service_token_id)
     fresh = api("GET", f"/accounts/{ACCOUNT}/access/apps/{app_id}").get("result") or app
     aud = str(fresh.get("aud") or "").strip()
     if not aud:

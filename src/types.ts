@@ -49,6 +49,7 @@ export interface DatasetMeta {
   sources: Record<string, string>;
   supplemented?: string;
   supplement?: string;
+  updatedAt?: string;
 }
 
 export interface Dataset {

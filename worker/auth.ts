@@ -10,7 +10,7 @@ export interface AuthEnv {
 }
 
 export type AuthResult =
-  | { ok: true }
+  | { ok: true; kind: "user" | "service" | "test" }
   | { ok: false; status: 401 | 403 | 500; message: string; headers?: HeadersInit };
 
 const jwksByTeam = new Map<string, JWTVerifyGetKey>();
@@ -105,6 +105,12 @@ function unauthorized(): AuthResult {
   };
 }
 
+function identityKind(payload: { email?: unknown }): "user" | "service" {
+  const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+  if (email && !email.startsWith("non_identity@")) return "user";
+  return "service";
+}
+
 async function accessJwt(
   request: Request,
   team: string,
@@ -114,8 +120,8 @@ async function accessJwt(
   const token = request.headers.get("cf-access-jwt-assertion");
   if (!token) return forbidden("Forbidden");
   try {
-    await jwtVerify(token, getKey, { issuer: team, audience });
-    return { ok: true };
+    const verified = await jwtVerify(token, getKey, { issuer: team, audience });
+    return { ok: true, kind: identityKind(verified.payload as { email?: unknown }) };
   } catch {
     return forbidden("Forbidden");
   }
@@ -126,15 +132,17 @@ async function basicAuth(request: Request, user: string, pass: string): Promise<
   const userOk = await sameSecret(provided.user, user);
   const passOk = await sameSecret(provided.pass, pass);
   if (!userOk || !passOk) return unauthorized();
-  return { ok: true };
+  return { ok: true, kind: "test" };
 }
 
 async function authorizeTest(request: Request, env: AuthEnv): Promise<AuthResult> {
   const user = filled(env.BASIC_AUTH_USER);
   const pass = filled(env.BASIC_AUTH_PASS);
-  if (!user && !pass) return { ok: true };
+  if (!user && !pass) return { ok: true, kind: "test" };
   if (!user || !pass) return unauthorized();
-  return basicAuth(request, user, pass);
+  const result = await basicAuth(request, user, pass);
+  if (!result.ok) return result;
+  return { ok: true, kind: "test" };
 }
 
 async function authorizeProduction(

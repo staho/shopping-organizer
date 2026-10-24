@@ -44,7 +44,10 @@
         "ENVIRONMENT": "production",
         "TEAM_DOMAIN": "https://staho.cloudflareaccess.com"
       },
-      "routes": [{ "pattern": "shopping-organizer.staho.dev", "custom_domain": true }]
+      "routes": [{ "pattern": "shopping-organizer.staho.dev", "custom_domain": true }],
+      // kv_namespaces are not inherited. The test env has none. Deploy replaces
+      // the placeholder with the namespace created by ensure-kv.py. Do not commit a real id.
+      "kv_namespaces": [{ "binding": "SHOPPING", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }]
     },
     "test": {
       // Separate script. Basic Auth only. Empty routes stop this env from

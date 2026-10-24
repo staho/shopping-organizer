@@ -213,6 +213,63 @@ test("a custom key header sends the raw key", async () => {
   assert.equal(header, "secret-key");
 });
 
+function memoryKv(initial: unknown): { get(key: string, type?: "json"): Promise<unknown>; put(key: string, value: string): Promise<void> } {
+  let raw = initial === undefined ? null : JSON.stringify(initial);
+  return {
+    async get(key, type) {
+      if (key !== "dataset" || raw == null) return null;
+      return type === "json" ? JSON.parse(raw) : raw;
+    },
+    async put(_key, value) {
+      raw = value;
+    },
+  };
+}
+
+test("continue uses the KV topic and ignores the bundled sample", async () => {
+  let title = "";
+  const response = await handleContinue(
+    post({ topicId: TOPIC, note: "" }, {}, "kv-topic"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_KEY: "secret-key",
+      SHOPPING: memoryKv({
+        topics: [{ id: TOPIC, title: "KV headphones", status: "considering", options: [] }],
+      }),
+    },
+    {
+      hits: new Map(),
+      fetch: async (_input, init) => {
+        title = JSON.parse(String(init?.body)).title;
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(title, "KV headphones");
+});
+
+test("continue does not fall back to the sample when KV has no such topic", async () => {
+  let called = false;
+  const response = await handleContinue(
+    post({ topicId: TOPIC }, {}, "kv-missing-topic"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_KEY: "secret-key",
+      SHOPPING: memoryKv({ topics: [] }),
+    },
+    {
+      hits: new Map(),
+      fetch: async () => {
+        called = true;
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 404);
+  assert.equal(called, false);
+});
+
 test("test environment still requires Basic Auth before the webhook", async () => {
   const env = {
     ENVIRONMENT: "test",

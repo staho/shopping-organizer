@@ -22,6 +22,7 @@ export function renderShell(
   main: HTMLElement,
   data: Dataset | null,
   onTheme: () => void,
+  stored = false,
 ): HTMLElement {
   const theme = currentTheme();
   const toDark = theme === "light";
@@ -37,7 +38,7 @@ export function renderShell(
   ) as HTMLButtonElement;
   themeButton.addEventListener("click", onTheme);
 
-  const compiled = data ? formatDate(data.meta.generated) : null;
+  const compiled = data ? formatDate(stored && data.meta.updatedAt ? data.meta.updatedAt : data.meta.generated) : null;
   const zone = data?.meta.timezone;
 
   return h(
@@ -56,7 +57,7 @@ export function renderShell(
           h("span", { class: "mark", "aria-hidden": "true" }, "K"),
           h("span", null,
             h("span", { class: "brand-name" }, "Kamil's list"),
-            h("span", { class: "brand-sub" }, "Sample shopping notes"),
+            h("span", { class: "brand-sub" }, stored ? "Shopping notes" : "Sample shopping notes"),
           ),
         ),
         h(
@@ -76,13 +77,21 @@ export function renderShell(
       h(
         "div",
         { class: "wrap" },
-        h("p", null, "Sample notes. Not a shop, and not a real purchase list."),
         h(
           "p",
           null,
-          compiled
-            ? `Compiled ${compiled}${zone ? `, ${zone}` : ""}. Replace data/shopping.json with a real list only behind Cloudflare Access.`
-            : "Replace data/shopping.json with a real list only behind Cloudflare Access.",
+          stored
+            ? "Stored list. Not a shop."
+            : "Sample notes. Not a shop, and not a real purchase list.",
+        ),
+        h(
+          "p",
+          null,
+          stored
+            ? `Updated ${compiled ?? "recently"}${zone ? `, ${zone}` : ""}.`
+            : compiled
+              ? `Compiled ${compiled}${zone ? `, ${zone}` : ""}. The sample file is for local development.`
+              : "The sample file is for local development.",
         ),
       ),
     ),

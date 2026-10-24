@@ -20,6 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Ensure KV namespace
+        id: kv
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 .github/scripts/ensure-kv.py
+
       - name: Ensure Cloudflare Access
         id: access
         env:
@@ -44,14 +51,16 @@ jobs:
           GROK_WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
           GROK_WEBHOOK_KEY: ${{ secrets.GROK_WEBHOOK_KEY }}
           GROK_WEBHOOK_AUTH: ${{ secrets.GROK_WEBHOOK_AUTH }}
+          ORGANIZER_UPDATE_KEY: ${{ secrets.ORGANIZER_UPDATE_KEY }}
         run: |
           set -euo pipefail
           if [ -n "${GROK_WEBHOOK_URL}" ]; then echo "::add-mask::${GROK_WEBHOOK_URL}"; fi
           if [ -n "${GROK_WEBHOOK_KEY}" ]; then echo "::add-mask::${GROK_WEBHOOK_KEY}"; fi
           if [ -n "${GROK_WEBHOOK_AUTH}" ]; then echo "::add-mask::${GROK_WEBHOOK_AUTH}"; fi
+          if [ -n "${ORGANIZER_UPDATE_KEY}" ]; then echo "::add-mask::${ORGANIZER_UPDATE_KEY}"; fi
           python3 << 'PY'
           import json, os
-          names = ("GROK_WEBHOOK_URL", "GROK_WEBHOOK_KEY", "GROK_WEBHOOK_AUTH")
+          names = ("GROK_WEBHOOK_URL", "GROK_WEBHOOK_KEY", "GROK_WEBHOOK_AUTH", "ORGANIZER_UPDATE_KEY")
           present = [name for name in names if os.environ.get(name, "").strip()]
           flag = os.path.join(os.environ["RUNNER_TEMP"], "grok-secret-names")
           if not present:
@@ -66,11 +75,11 @@ jobs:
           names="$(cat "${RUNNER_TEMP}/grok-secret-names")"
           if [ -z "$names" ]; then
             echo "extra=" >> "$GITHUB_OUTPUT"
-            echo "Grok webhook secrets are absent. /api/continue will return 503."
+            echo "No Worker secrets to upload. /api/continue and writes return 503 until their secrets are set."
             exit 0
           fi
           echo "extra=--secrets-file ${RUNNER_TEMP}/grok-secrets.json" >> "$GITHUB_OUTPUT"
-          echo "Grok webhook secrets to upload: ${names}"
+          echo "Worker secrets to upload: ${names}"
           case " $names " in
             *" GROK_WEBHOOK_URL "*) ;;
             *) echo "GROK_WEBHOOK_URL is absent. /api/continue will return 503." ;;
@@ -79,6 +88,15 @@ jobs:
             *" GROK_WEBHOOK_AUTH "*|*" GROK_WEBHOOK_KEY "*) ;;
             *) echo "No webhook credential is set. /api/continue will return 503." ;;
           esac
+          case " $names " in
+            *" ORGANIZER_UPDATE_KEY "*) ;;
+            *) echo "ORGANIZER_UPDATE_KEY is absent. Writes return 503." ;;
+          esac
+
+      - name: Bind production KV namespace
+        env:
+          KV_ID: ${{ steps.kv.outputs.kv_id }}
+        run: python3 .github/scripts/bind-kv.py
 
       - name: Deploy production Worker
         uses: cloudflare/wrangler-action@v3

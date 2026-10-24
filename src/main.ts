@@ -23,6 +23,8 @@ type Route =
   | { name: "not-found" };
 
 let dataset: Dataset | null = null;
+let stored = false;
+let loadError: "empty" | "error" | null = null;
 let lastPath = "";
 
 function parseRoute(pathname: string): Route {
@@ -84,8 +86,10 @@ function render(): void {
   document.title = pageTitle(route, dataset);
 
   let main: HTMLElement;
-  if (!dataset) {
-    main = messagePage("The list didn’t load", "shopping.json should be served from the site root. Check data/shopping.json and refresh.");
+  if (!dataset && loadError === "empty") {
+    main = messagePage("Nothing is stored yet", "The list has not been seeded. The sample file is only for local development.");
+  } else if (!dataset) {
+    main = messagePage("The list didn’t load", "The stored list could not be read. Refresh, and sign in again if the login page comes back.");
   } else {
     main = renderPage(route, dataset);
   }
@@ -94,7 +98,7 @@ function render(): void {
     renderShell(routeName(route), main, dataset, () => {
       paintTheme(currentTheme() === "dark" ? "light" : "dark", true);
       render();
-    }),
+    }, stored),
   );
 
   if (caret) {
@@ -137,13 +141,34 @@ async function boot(): Promise<void> {
     render();
   });
 
+  stored = false;
+  loadError = null;
   try {
-    const response = await fetch("/shopping.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    dataset = normalize(await response.json());
+    const remote = await fetch("/api/data", { cache: "no-store" });
+    const type = remote.headers.get("content-type") ?? "";
+    if (type.includes("json")) {
+      if (remote.ok) {
+        dataset = normalize(await remote.json());
+        stored = true;
+      } else if (remote.status === 404) {
+        dataset = null;
+        loadError = "empty";
+      } else {
+        dataset = null;
+        loadError = "error";
+      }
+    } else if (type.includes("text/html")) {
+      const sample = await fetch("/shopping.json", { cache: "no-store" });
+      if (!sample.ok) throw new Error(`HTTP ${sample.status}`);
+      dataset = normalize(await sample.json());
+    } else {
+      dataset = null;
+      loadError = "error";
+    }
   } catch (error) {
     console.error(error);
     dataset = null;
+    loadError = "error";
   }
   render();
 }

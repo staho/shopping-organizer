@@ -168,7 +168,7 @@ The live site is Access only. The password gate exists only for a separate test 
 
 `vars` are not inherited. `TEAM_DOMAIN` is `https://staho.cloudflareaccess.com` in both production `vars` blocks. `POLICY_AUD` is the Access application audience tag. It is not in the repo. The deploy workflow passes it with `--var`. A production deploy without that value returns **500** and does not serve the site.
 
-Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. Optional: `GROK_WEBHOOK_URL`, `GROK_WEBHOOK_KEY`, and `GROK_WEBHOOK_AUTH`. The deploy uploads each one that is set, and still succeeds when any of them are missing. `POST /api/continue` returns 503 until the URL and a credential are both present. The workflow masks the token, the account id, the email, the audience tag, and the webhook values.
+Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. Optional: `GROK_WEBHOOK_URL`, `GROK_WEBHOOK_KEY`, `GROK_WEBHOOK_AUTH`, and `ORGANIZER_UPDATE_KEY`. The deploy uploads each one that is set, and still succeeds when any of them are missing. `POST /api/continue` returns 503 until the URL and a credential are both present. Writes return 503 until `ORGANIZER_UPDATE_KEY` is present. The workflow masks the token, the account id, the email, the audience tag, and the webhook values.
 
 ```bash
 npm install
@@ -248,7 +248,13 @@ The Worker uses the same gate as the rest of the site: Cloudflare Access in prod
 }
 ```
 
-`url` is the real topic path (`/topic/<id>`), not a hash route. `topic` is the full object from the data file.
+`url` is the real topic path (`/topic/<id>`), not a hash route. `topic` is the full object from the stored list, or from the bundled sample when KV is not bound.
+
+### Stored list
+
+Production reads and writes the list in a Workers KV namespace titled `kamil-shopping-organizer`, binding `SHOPPING`. The test Worker has no KV binding. `GET /api/data` returns the stored dataset to a browser session. It does not accept a service token. When KV is empty the response is 404 JSON and the page does not substitute the sample. Local `npm run dev` has no Worker, so the page still loads `data/shopping.json`.
+
+Zakupoholik writes through `PUT /api/data`, `PUT /api/topics/:id`, and `DELETE /api/topics/:id`. See [docs/zakupoholik.md](docs/zakupoholik.md). Those routes need an Access service token and `Authorization: Bearer` the `ORGANIZER_UPDATE_KEY` secret. A browser session cannot call them. The sample file stays in the repo as the dev and test fallback. Do not commit a real list.
 
 The webhook URL is the Worker secret `GROK_WEBHOOK_URL`. The credential is `GROK_WEBHOOK_AUTH` or, if that is unset, `GROK_WEBHOOK_KEY`. When `GROK_WEBHOOK_AUTH` is set, that trimmed value is sent as the `Authorization` header and neither the key nor `GROK_WEBHOOK_KEY_HEADER` is used. Otherwise the key is sent in `Authorization: Bearer <key>` unless the plain var `GROK_WEBHOOK_KEY_HEADER` names a different header, in which case that header carries the raw key. If the URL is missing, or both credentials are missing or blank, the endpoint returns **503** `not configured`. None of these values are written into the page or the logs. A note longer than 4000 characters is rejected. `npm run dev` does not run the Worker, so the button cannot complete a send there.
 

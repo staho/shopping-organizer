@@ -1,14 +1,12 @@
-import raw from "../data/shopping.json" with { type: "json" };
 import type { Topic } from "../src/types.ts";
-
-const topics = (raw as { topics: Topic[] }).topics;
+import { loadDataset, type StoreEnv } from "./store.ts";
 const PUBLIC_ORIGIN = "https://shopping-organizer.staho.dev";
 const MAX_NOTE = 4000;
 const MAX_BODY = 16_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 8;
 
-export interface ContinueEnv {
+export interface ContinueEnv extends StoreEnv {
   GROK_WEBHOOK_URL?: string;
   GROK_WEBHOOK_KEY?: string;
   /**
@@ -138,7 +136,8 @@ export async function handleContinue(
   if (typeof note !== "string") return text("Bad request", 400);
   if (note.length > MAX_NOTE) return text("Note is too long", 400);
 
-  const topic = topics.find((item) => item.id === body.topicId);
+  const dataset = await loadDataset(env);
+  const topic = dataset?.topics.find((item) => item.id === body.topicId);
   if (!topic) return text("Topic not found", 404);
 
   const sentAt = new Date(now).toISOString();
