@@ -11,6 +11,11 @@ const RATE_LIMIT = 8;
 export interface ContinueEnv {
   GROK_WEBHOOK_URL?: string;
   GROK_WEBHOOK_KEY?: string;
+  /**
+   * Full Authorization header value from the receiver.
+   * When set, this is sent verbatim and the key header is not used.
+   */
+  GROK_WEBHOOK_AUTH?: string;
   /** Header that carries the key. `Authorization` sends `Bearer <key>`. Any other name sends the raw key. */
   GROK_WEBHOOK_KEY_HEADER?: string;
 }
@@ -40,10 +45,13 @@ function topicStatus(topic: Topic): string {
   return topic.status;
 }
 
-function webhookConfig(env: ContinueEnv): { url: string; key: string; header: string } | null {
+function headerValueOk(value: string): boolean {
+  return !/[\u0000-\u001F\u007F]/.test(value);
+}
+
+function webhookConfig(env: ContinueEnv): { url: string; header: string; value: string } | null {
   const url = filled(env.GROK_WEBHOOK_URL);
-  const key = filled(env.GROK_WEBHOOK_KEY);
-  if (!url || !key) return null;
+  if (!url) return null;
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -51,10 +59,21 @@ function webhookConfig(env: ContinueEnv): { url: string; key: string; header: st
     return null;
   }
   if (parsed.protocol !== "https:") return null;
+
+  const auth = filled(env.GROK_WEBHOOK_AUTH);
+  if (auth) {
+    if (!headerValueOk(auth)) return null;
+    return { url, header: "Authorization", value: auth };
+  }
+
+  const key = filled(env.GROK_WEBHOOK_KEY);
+  if (!key) return null;
   const header = filled(env.GROK_WEBHOOK_KEY_HEADER) ?? "Authorization";
   if (!/^[\w!#$%&'*+.^`|~-]+$/.test(header)) return null;
   if (["content-type", "content-length", "host", "connection"].includes(header.toLowerCase())) return null;
-  return { url, key, header };
+  const value = header.toLowerCase() === "authorization" ? `Bearer ${key}` : key;
+  if (!headerValueOk(value)) return null;
+  return { url, header, value };
 }
 
 function limited(ip: string, now: number, store: Map<string, number[]>): boolean {
@@ -125,7 +144,7 @@ export async function handleContinue(
   const sentAt = new Date(now).toISOString();
   const payload = continuePayload(topic, note, sentAt);
   const headers = new Headers({ "content-type": "application/json" });
-  headers.set(config.header, config.header.toLowerCase() === "authorization" ? `Bearer ${config.key}` : config.key);
+  headers.set(config.header, config.value);
 
   const fetchImpl = deps.fetch ?? fetch;
   let upstream: Response;

@@ -103,6 +103,95 @@ test("webhook payload uses the bundled topic and the configured header", async (
   assert.equal(payload.topic.options.length > 0, true);
 });
 
+test("GROK_WEBHOOK_AUTH is the Authorization value and ignores the key", async () => {
+  let authorization: string | null = null;
+  let custom: string | null = null;
+  const response = await handleContinue(
+    post({ topicId: TOPIC }, {}, "verbatim-auth"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_KEY: "secret-key",
+      GROK_WEBHOOK_KEY_HEADER: "X-Grok-Key",
+      GROK_WEBHOOK_AUTH: "Bearer panel-ready-value",
+    },
+    {
+      hits: new Map(),
+      fetch: async (_input, init) => {
+        const headers = new Headers(init?.headers);
+        authorization = headers.get("authorization");
+        custom = headers.get("x-grok-key");
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(authorization, "Bearer panel-ready-value");
+  assert.equal(custom, null);
+});
+
+test("GROK_WEBHOOK_AUTH is enough without a webhook key", async () => {
+  let authorization: string | null = null;
+  const response = await handleContinue(
+    post({ topicId: TOPIC }, {}, "auth-without-key"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_AUTH: "panel-ready-value",
+    },
+    {
+      hits: new Map(),
+      fetch: async (_input, init) => {
+        authorization = new Headers(init?.headers).get("authorization");
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(authorization, "panel-ready-value");
+});
+
+test("a blank GROK_WEBHOOK_AUTH falls back to the key header", async () => {
+  let authorization: string | null = null;
+  const response = await handleContinue(
+    post({ topicId: TOPIC }, {}, "blank-auth"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_KEY: "secret-key",
+      GROK_WEBHOOK_AUTH: "   ",
+    },
+    {
+      hits: new Map(),
+      fetch: async (_input, init) => {
+        authorization = new Headers(init?.headers).get("authorization");
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(authorization, "Bearer secret-key");
+});
+
+test("an Authorization value with a line break is not configured", async () => {
+  let called = false;
+  const response = await handleContinue(
+    post({ topicId: TOPIC }, {}, "bad-auth"),
+    {
+      GROK_WEBHOOK_URL: "https://webhook.test/hook",
+      GROK_WEBHOOK_AUTH: "Bearer abc\nX-Injected: 1",
+      GROK_WEBHOOK_KEY: "secret-key",
+    },
+    {
+      hits: new Map(),
+      fetch: async () => {
+        called = true;
+        return new Response(null, { status: 204 });
+      },
+    },
+  );
+  assert.equal(response.status, 503);
+  assert.equal(await response.text(), "not configured");
+  assert.equal(called, false);
+});
+
 test("a custom key header sends the raw key", async () => {
   let header: string | null = null;
   const response = await handleContinue(

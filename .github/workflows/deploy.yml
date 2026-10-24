@@ -43,18 +43,42 @@ jobs:
         env:
           GROK_WEBHOOK_URL: ${{ secrets.GROK_WEBHOOK_URL }}
           GROK_WEBHOOK_KEY: ${{ secrets.GROK_WEBHOOK_KEY }}
+          GROK_WEBHOOK_AUTH: ${{ secrets.GROK_WEBHOOK_AUTH }}
         run: |
           set -euo pipefail
           if [ -n "${GROK_WEBHOOK_URL}" ]; then echo "::add-mask::${GROK_WEBHOOK_URL}"; fi
           if [ -n "${GROK_WEBHOOK_KEY}" ]; then echo "::add-mask::${GROK_WEBHOOK_KEY}"; fi
-          if [ -z "${GROK_WEBHOOK_URL}" ] || [ -z "${GROK_WEBHOOK_KEY}" ]; then
+          if [ -n "${GROK_WEBHOOK_AUTH}" ]; then echo "::add-mask::${GROK_WEBHOOK_AUTH}"; fi
+          python3 << 'PY'
+          import json, os
+          names = ("GROK_WEBHOOK_URL", "GROK_WEBHOOK_KEY", "GROK_WEBHOOK_AUTH")
+          present = [name for name in names if os.environ.get(name, "").strip()]
+          flag = os.path.join(os.environ["RUNNER_TEMP"], "grok-secret-names")
+          if not present:
+              open(flag, "w").write("")
+          else:
+              path = os.path.join(os.environ["RUNNER_TEMP"], "grok-secrets.json")
+              with open(path, "w") as handle:
+                  json.dump({name: os.environ[name] for name in present}, handle)
+              os.chmod(path, 0o600)
+              open(flag, "w").write(" ".join(present))
+          PY
+          names="$(cat "${RUNNER_TEMP}/grok-secret-names")"
+          if [ -z "$names" ]; then
             echo "extra=" >> "$GITHUB_OUTPUT"
             echo "Grok webhook secrets are absent. /api/continue will return 503."
             exit 0
           fi
-          python3 -c 'import json, os; path = os.environ["RUNNER_TEMP"] + "/grok-secrets.json"; json.dump({"GROK_WEBHOOK_URL": os.environ["GROK_WEBHOOK_URL"], "GROK_WEBHOOK_KEY": os.environ["GROK_WEBHOOK_KEY"]}, open(path, "w")); os.chmod(path, 0o600)'
           echo "extra=--secrets-file ${RUNNER_TEMP}/grok-secrets.json" >> "$GITHUB_OUTPUT"
-          echo "Grok webhook secrets will be uploaded with this deploy."
+          echo "Grok webhook secrets to upload: ${names}"
+          case " $names " in
+            *" GROK_WEBHOOK_URL "*) ;;
+            *) echo "GROK_WEBHOOK_URL is absent. /api/continue will return 503." ;;
+          esac
+          case " $names " in
+            *" GROK_WEBHOOK_AUTH "*|*" GROK_WEBHOOK_KEY "*) ;;
+            *) echo "No webhook credential is set. /api/continue will return 503." ;;
+          esac
 
       - name: Deploy production Worker
         uses: cloudflare/wrangler-action@v3

@@ -168,7 +168,7 @@ The live site is Access only. The password gate exists only for a separate test 
 
 `vars` are not inherited. `TEAM_DOMAIN` is `https://staho.cloudflareaccess.com` in both production `vars` blocks. `POLICY_AUD` is the Access application audience tag. It is not in the repo. The deploy workflow passes it with `--var`. A production deploy without that value returns **500** and does not serve the site.
 
-Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. Optional: `GROK_WEBHOOK_URL` and `GROK_WEBHOOK_KEY`. When both are set, the deploy uploads them as Worker secrets. When either is missing, the deploy still succeeds and `POST /api/continue` returns 503. The workflow masks the token, the account id, the email, the audience tag, and the webhook values.
+Production deploys from GitHub Actions (`.github/workflows/deploy.yml`) on every push to `main`, and from the Actions tab with **Run workflow**. The job creates or updates the Access application for `shopping-organizer.staho.dev` before `wrangler deploy --env production`. If that API call fails, the job stops and the Worker is not published. Repository secrets, names only: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ACCESS_ALLOWED_EMAIL`. Optional: `GROK_WEBHOOK_URL`, `GROK_WEBHOOK_KEY`, and `GROK_WEBHOOK_AUTH`. The deploy uploads each one that is set, and still succeeds when any of them are missing. `POST /api/continue` returns 503 until the URL and a credential are both present. The workflow masks the token, the account id, the email, the audience tag, and the webhook values.
 
 ```bash
 npm install
@@ -250,7 +250,7 @@ The Worker uses the same gate as the rest of the site: Cloudflare Access in prod
 
 `url` is the real topic path (`/topic/<id>`), not a hash route. `topic` is the full object from the data file.
 
-The webhook URL and key are Worker secrets, `GROK_WEBHOOK_URL` and `GROK_WEBHOOK_KEY`. If either is missing or blank, the endpoint returns **503** `not configured`. They are not written into the page or the logs. The key is sent in `Authorization: Bearer <key>` unless the plain var `GROK_WEBHOOK_KEY_HEADER` names a different header, in which case that header carries the raw key. A note longer than 4000 characters is rejected. `npm run dev` does not run the Worker, so the button cannot complete a send there.
+The webhook URL is the Worker secret `GROK_WEBHOOK_URL`. The credential is `GROK_WEBHOOK_AUTH` or, if that is unset, `GROK_WEBHOOK_KEY`. When `GROK_WEBHOOK_AUTH` is set, that trimmed value is sent as the `Authorization` header and neither the key nor `GROK_WEBHOOK_KEY_HEADER` is used. Otherwise the key is sent in `Authorization: Bearer <key>` unless the plain var `GROK_WEBHOOK_KEY_HEADER` names a different header, in which case that header carries the raw key. If the URL is missing, or both credentials are missing or blank, the endpoint returns **503** `not configured`. None of these values are written into the page or the logs. A note longer than 4000 characters is rejected. `npm run dev` does not run the Worker, so the button cannot complete a send there.
 
 ### Cloudflare Pages
 

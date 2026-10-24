@@ -23,9 +23,11 @@
   // ENVIRONMENT is production, so a bare deploy stays Access-only and fail-closed.
   // POLICY_AUD is not committed. GitHub Actions passes it with --var. Without it
   // the Worker returns 500. vars do not inherit into named environments.
-  // GROK_WEBHOOK_URL and GROK_WEBHOOK_KEY are Worker secrets, uploaded by Actions
-  // only when both GitHub secrets exist. GROK_WEBHOOK_KEY_HEADER is an optional
-  // plain var; the default header is Authorization: Bearer <key>.
+  // GROK_WEBHOOK_URL, GROK_WEBHOOK_KEY, and GROK_WEBHOOK_AUTH are Worker secrets.
+  // Actions uploads each one only when that GitHub secret is set. When
+  // GROK_WEBHOOK_AUTH is set it is the Authorization value. Otherwise
+  // GROK_WEBHOOK_KEY_HEADER is an optional plain var; the default is
+  // Authorization: Bearer <key>.
   "vars": {
     "ENVIRONMENT": "production",
     "TEAM_DOMAIN": "https://staho.cloudflareaccess.com"
