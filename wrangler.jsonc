@@ -21,17 +21,13 @@
   },
   // `wrangler deploy` with no --env uses THIS top-level config, not env.production.
   // ENVIRONMENT is production, so a bare deploy stays Access-only and fail-closed.
-  // vars do not inherit into named environments. Set TEAM_DOMAIN and POLICY_AUD here
-  // and again under env.production before deploying. Do not put Basic Auth secrets here.
+  // POLICY_AUD is not committed. GitHub Actions passes it with --var. Without it
+  // the Worker returns 500. vars do not inherit into named environments.
   "vars": {
-    "ENVIRONMENT": "production"
-    // Add a comma after "production", then uncomment both lines:
-    // "TEAM_DOMAIN": "https://<team-name>.cloudflareaccess.com",
-    // "POLICY_AUD": "<application-audience-tag>"
+    "ENVIRONMENT": "production",
+    "TEAM_DOMAIN": "https://staho.cloudflareaccess.com"
   },
-  // workers.dev is off, so a deploy needs a route. Uncomment on the top level AND
-  // under env.production. Do not put the live hostname on env.test.
-  // "routes": [{ "pattern": "list.example.com", "custom_domain": true }],
+  "routes": [{ "pattern": "shopping-organizer.staho.dev", "custom_domain": true }],
   "env": {
     "production": {
       // Keep the live script name. Without this, Wrangler would publish
@@ -40,18 +36,18 @@
       "workers_dev": false,
       "preview_urls": false,
       "vars": {
-        "ENVIRONMENT": "production"
-        // Add a comma after "production", then uncomment both lines:
-        // "TEAM_DOMAIN": "https://<team-name>.cloudflareaccess.com",
-        // "POLICY_AUD": "<application-audience-tag>"
-      }
-      // "routes": [{ "pattern": "list.example.com", "custom_domain": true }]
+        "ENVIRONMENT": "production",
+        "TEAM_DOMAIN": "https://staho.cloudflareaccess.com"
+      },
+      "routes": [{ "pattern": "shopping-organizer.staho.dev", "custom_domain": true }]
     },
     "test": {
-      // Separate script. Basic Auth only. Never attach the live hostname here.
+      // Separate script. Basic Auth only. Empty routes stop this env from
+      // inheriting the live custom domain.
       "name": "kamil-shopping-organizer-test",
       "workers_dev": false,
       "preview_urls": false,
+      "routes": [],
       "vars": {
         "ENVIRONMENT": "test"
       },
